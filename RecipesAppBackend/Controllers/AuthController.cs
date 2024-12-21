@@ -22,7 +22,7 @@ namespace RecipesApp.Controllers
         {
             var user = _context.Users.FirstOrDefault(u => u.Email == request.Email);
 
-            if (user == null || BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) 
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) 
             {
                 return Unauthorized(new { message = "Invalid email or password" });
             }
