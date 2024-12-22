@@ -17,20 +17,24 @@ public class RecipesController : ControllerBase
     }
 
     [HttpPost]
-    public IActionResult AddRecipe([FromBody] dynamic recipeData)
+    public IActionResult AddRecipe([FromBody] Recipe recipe)
     {
         try
         {
-            Recipe recipe = new Recipe
+            if (recipe == null ||
+                string.IsNullOrEmpty(recipe.Name) ||
+                string.IsNullOrEmpty(recipe.Description) ||
+                string.IsNullOrEmpty(recipe.Instructions) ||
+                string.IsNullOrEmpty(recipe.IngredientsJson) ||
+                string.IsNullOrEmpty(recipe.CategoryJson))
             {
-                Name = recipeData.name,
-                Description = recipeData.description,
-                Ingredients = JsonConvert.SerializeObject(recipeData.ingredients),
-                Instructions = recipeData.instructions,
-                Category = JsonConvert.SerializeObject(recipeData.category),
-                ImagePath = recipeData.imagePath,
-                IsUserAdded = recipeData.isUserAdded
-            };
+                return BadRequest(new { message = "Invalid recipe data." });
+            }
+
+            if (string.IsNullOrEmpty(recipe.ImagePath))
+            {
+                recipe.ImagePath = "assets/images/comingsoon.jpg";
+            }
 
             _context.Recipes.Add(recipe);
             _context.SaveChanges();
@@ -57,19 +61,21 @@ public class RecipesController : ControllerBase
             if (updatedRecipe == null ||
                 string.IsNullOrWhiteSpace(updatedRecipe.Name) ||
                 string.IsNullOrWhiteSpace(updatedRecipe.Description) ||
-                updatedRecipe.Ingredients == null || updatedRecipe.Ingredients.Count == 0 ||
                 string.IsNullOrWhiteSpace(updatedRecipe.Instructions) ||
-                updatedRecipe.Category == null || updatedRecipe.Category.Count == 0)
+                string.IsNullOrWhiteSpace(updatedRecipe.IngredientsJson) ||
+                string.IsNullOrWhiteSpace(updatedRecipe.CategoryJson))
             {
                 return BadRequest(new { message = "Invalid recipe data." });
             }
-
+            
             recipe.Name = updatedRecipe.Name;
             recipe.Description = updatedRecipe.Description;
-            recipe.IngredientsJson = JsonConvert.SerializeObject(updatedRecipe.Ingredients);
-            recipe.CategoryJson = JsonConvert.SerializeObject(updatedRecipe.Category);
+            recipe.IngredientsJson = updatedRecipe.IngredientsJson;
+            recipe.CategoryJson = updatedRecipe.CategoryJson;
             recipe.Instructions = updatedRecipe.Instructions;
-            recipe.ImagePath = updatedRecipe.ImagePath;
+            recipe.ImagePath = string.IsNullOrWhiteSpace(updatedRecipe.ImagePath)
+                ? "assets/images/comingsoon.jpg"
+                : updatedRecipe.ImagePath;
             recipe.IsUserAdded = updatedRecipe.IsUserAdded;
 
             _context.SaveChanges();
@@ -110,6 +116,28 @@ public class RecipesController : ControllerBase
                 message = "An error occurred while retrieving recipes.",
                 error = ex.Message
             });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public IActionResult DeleteRecipe(int id)
+    {
+        try
+        {
+            var recipe = _context.Recipes.FirstOrDefault(r => r.Id == id);
+            if (recipe == null)
+            {
+                return NotFound(new { message = "Recipe not found." });
+            }
+
+            _context.Recipes.Remove(recipe);
+            _context.SaveChanges();
+
+            return Ok(new { message = "Recipe deleted successfully!" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred while deleting the recipe.", error = ex.Message });
         }
     }
 
